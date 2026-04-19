@@ -7,7 +7,6 @@ Requires: HF Pro account with ZeroGPU Space selected as hardware.
 
 import os
 import re
-import spaces          # HF ZeroGPU decorator
 import torch
 from datetime import datetime
 
@@ -24,6 +23,7 @@ def _patched_set_special(self, special_tokens=None):
 _tub.PreTrainedTokenizerBase._set_model_specific_special_tokens = _patched_set_special
 # ─────────────────────────────────────────────────────────────────────────────
 
+import spaces          # HF ZeroGPU decorator
 import gradio as gr
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
@@ -70,7 +70,7 @@ def get_model():
 
 # ── Core inference — wrapped with @spaces.GPU for ZeroGPU ─────────────────────
 @spaces.GPU(duration=120)   # Up to 120s of H200 per call
-def generate_response(conversation: list[dict], user_message: str) -> tuple:
+def generate_response(conversation: list, user_message: str) -> tuple:
     """Run Gemma 4 inference on the Hardware Agent conversation."""
 
     model = get_model()
@@ -285,7 +285,7 @@ label { color: var(--text-muted) !important; font-family: 'Syne', sans-serif !im
 """
 
 
-def chat(user_message: str, history: list, conversation_state: list) -> tuple:
+def chat(user_message, history, conversation_state):
     """Main chat handler."""
     if not user_message.strip():
         return history, conversation_state, "", ""
@@ -293,11 +293,8 @@ def chat(user_message: str, history: list, conversation_state: list) -> tuple:
     # Run inference
     response, sketch, sketch_info = generate_response(conversation_state, user_message)
 
-    # Update history for Gradio chatbot display (messages format for Gradio 5)
-    history = history + [
-        {"role": "user", "content": user_message},
-        {"role": "assistant", "content": response},
-    ]
+    # Update history for Gradio chatbot display (tuple format for Gradio 4.x)
+    history = history + [(user_message, response)]
 
     # Update conversation state for multi-turn context
     conversation_state = conversation_state + [
@@ -312,9 +309,9 @@ def reset_chat():
     return [], [], "", "", ""
 
 
-def download_sketch(sketch_text: str) -> str | None:
+def download_sketch(sketch_text):
     """Save sketch to a temp file for download."""
-    if not sketch_text.strip():
+    if not sketch_text or not sketch_text.strip():
         return None
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = f"/tmp/sketch_{ts}.ino"
@@ -338,7 +335,6 @@ with gr.Blocks(css=CUSTOM_CSS, title="Gemma 4 Hardware Agent") as demo:
                 height=520,
                 show_copy_button=True,
                 render_markdown=True,
-                type="messages",
                 elem_classes=["chatbot"],
             )
 
@@ -426,6 +422,4 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         server_port=7860,
         share=False,
-        show_api=False,
-        ssr_mode=False,
     )
