@@ -8,10 +8,24 @@ Requires: HF Pro account with ZeroGPU Space selected as hardware.
 import os
 import re
 import spaces          # HF ZeroGPU decorator
-import gradio as gr
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from datetime import datetime
+
+# ── Patch: Gemma 4 tokenizer uses list for extra_special_tokens ──────────────
+# Some transformers versions expect a dict. This patch handles both formats.
+import transformers.tokenization_utils_base as _tub
+_original_set_special = _tub.PreTrainedTokenizerBase._set_model_specific_special_tokens
+
+def _patched_set_special(self, special_tokens=None):
+    if isinstance(special_tokens, list):
+        special_tokens = {tok: tok for tok in special_tokens}
+    return _original_set_special(self, special_tokens)
+
+_tub.PreTrainedTokenizerBase._set_model_specific_special_tokens = _patched_set_special
+# ─────────────────────────────────────────────────────────────────────────────
+
+import gradio as gr
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 # ── Import project modules ──────────────────────────────────────────────────
 from src.agent.agent_loop import SYSTEM_PROMPT
