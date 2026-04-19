@@ -22,33 +22,44 @@ from src.utils.sketch_utils import (
 )
 
 # ── Model config ─────────────────────────────────────────────────────────────
-MODEL_ID       = "google/gemma-4-26B-A4B-it"   # Change to E2B for faster cold starts
+MODEL_ID       = "google/gemma-4-26B-A4B-it"
 MAX_NEW_TOKENS = 2048
 
-# ── Load model at startup (outside @spaces.GPU so it stays in CPU RAM) ───────
+# ── Load tokenizer at startup (lightweight, no GPU needed) ───────────────────
 print(f"⏳ Loading tokenizer: {MODEL_ID}")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+print("✅ Tokenizer ready!")
 
-print(f"⏳ Loading model (4-bit quant for H200 efficiency)...")
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.bfloat16,
-    bnb_4bit_use_double_quant=True,
-)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_ID,
-    quantization_config=bnb_config,
-    device_map="auto",
-)
-model.eval()
-print("✅ Model ready!")
+# ── Lazy model loader (loads on first GPU request) ───────────────────────────
+_model = None
+
+def get_model():
+    """Lazy-load the model on first inference call (inside GPU context)."""
+    global _model
+    if _model is None:
+        print(f"⏳ Loading model (4-bit quant)...")
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+        )
+        _model = AutoModelForCausalLM.from_pretrained(
+            MODEL_ID,
+            quantization_config=bnb_config,
+            device_map="auto",
+        )
+        _model.eval()
+        print("✅ Model ready!")
+    return _model
 
 
 # ── Core inference — wrapped with @spaces.GPU for ZeroGPU ─────────────────────
 @spaces.GPU(duration=120)   # Up to 120s of H200 per call
 def generate_response(conversation: list[dict], user_message: str) -> tuple:
     """Run Gemma 4 inference on the Hardware Agent conversation."""
+
+    model = get_model()
 
     # Build full message list: system + history + new user message
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -102,7 +113,7 @@ def generate_response(conversation: list[dict], user_message: str) -> tuple:
 
 DESCRIPTION = """
 # 🤖 Gemma 4 — ESP32 & Arduino Hardware Project Agent
-**Powered by Google Gemma 4 E4B · HuggingFace ZeroGPU (H200)**
+**Powered by Google Gemma 4 26B-A4B · HuggingFace ZeroGPU (H200)**
 
 Ask the agent to **generate code**, **list components**, **explain wiring**, **debug sketches**, or **suggest projects**.
 Supported boards: ESP32, ESP8266, Arduino Uno/Nano/Mega
