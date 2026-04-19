@@ -9,8 +9,8 @@ app_file: app.py
 pinned: true
 license: apache-2.0
 short_description: ESP32 & Arduino project agent powered by Gemma 4 + ZeroGPU
-hardware: zero-gpu
-suggested_hardware: zero-gpu
+hardware: zero-a10g
+suggested_hardware: zero-a10g
 tags:
   - gemma
   - arduino
