@@ -22,7 +22,7 @@ from src.utils.sketch_utils import (
 )
 
 # ── Model config ─────────────────────────────────────────────────────────────
-MODEL_ID       = "google/gemma-4-E4B-it"   # Change to E2B for faster cold starts
+MODEL_ID       = "google/gemma-4-26B-A4B-it"   # Change to E2B for faster cold starts
 MAX_NEW_TOKENS = 2048
 
 # ── Load model at startup (outside @spaces.GPU so it stays in CPU RAM) ───────
