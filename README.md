@@ -1,26 +1,3 @@
----
-title: Gemma 4 Hardware Agent
-emoji: 🤖
-colorFrom: green
-colorTo: blue
-sdk: gradio
-sdk_version: 4.44.0
-app_file: app.py
-pinned: true
-license: apache-2.0
-short_description: ESP32 & Arduino project agent powered by Gemma 4 + ZeroGPU
-hardware: zero-a10g
-suggested_hardware: zero-a10g
-tags:
-  - gemma
-  - arduino
-  - esp32
-  - hardware
-  - agent
-  - code-generation
-  - gradio
----
-
 # 🤖 Gemma 4 — ESP32 & Arduino Hardware Project Agent
 
 An agentic hardware assistant built on **Google Gemma 4 E4B-it**, running on **HuggingFace ZeroGPU (H200)**.
