@@ -268,8 +268,11 @@ def chat(user_message: str, history: list, conversation_state: list) -> tuple:
     # Run inference
     response, sketch, sketch_info = generate_response(conversation_state, user_message)
 
-    # Update history for Gradio chatbot display
-    history = history + [(user_message, response)]
+    # Update history for Gradio chatbot display (messages format for Gradio 5)
+    history = history + [
+        {"role": "user", "content": user_message},
+        {"role": "assistant", "content": response},
+    ]
 
     # Update conversation state for multi-turn context
     conversation_state = conversation_state + [
@@ -310,6 +313,7 @@ with gr.Blocks(css=CUSTOM_CSS, title="Gemma 4 Hardware Agent") as demo:
                 height=520,
                 show_copy_button=True,
                 render_markdown=True,
+                type="messages",
                 elem_classes=["chatbot"],
             )
 
